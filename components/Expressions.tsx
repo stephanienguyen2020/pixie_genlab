@@ -9,12 +9,12 @@ export default function Expressions({
 }: {
   values: Record<string, number>;
 }) {
-  const top3 = R.pipe(
+  const top5 = R.pipe(
     values,
     R.entries(),
     R.sortBy(R.pathOr([1], 0)),
     R.reverse(),
-    R.take(3)
+    R.take(5)
   );
 
   return (
@@ -23,7 +23,7 @@ export default function Expressions({
         "text-xs p-3 w-full border-t border-border flex flex-col md:flex-row gap-3"
       }
     >
-      {top3.map(([key, value]) => (
+      {top5.map(([key, value]) => (
         <div className={"w-full overflow-hidden"}>
           <div className={"flex items-center justify-between gap-1 font-mono pb-1"}>
             <div className={"font-medium truncate"}>{key}</div>

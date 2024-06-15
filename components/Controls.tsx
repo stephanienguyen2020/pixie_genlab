@@ -1,65 +1,83 @@
 "use client";
-import { expressionColors, isExpressionColor } from "@/utils/expressionColors";
-import { motion } from "framer-motion";
-import { CSSProperties } from "react";
-import * as R from "remeda";
+import { useVoice } from "@humeai/voice-react";
+import { Button } from "./ui/button";
+import { Mic, MicOff, Phone } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Toggle } from "./ui/toggle";
+import MicFFT from "./MicFFT";
+import { cn } from "@/utils";
 
-export default function Expressions({
-  values,
-}: {
-  values: Record<string, number>;
-}) {
-  const top3 = R.pipe(
-    values,
-    R.entries(),
-    R.sortBy(R.pathOr([1], 0)),
-    R.reverse(),
-    R.take(3)
-  );
+export default function Controls() {
+  const { disconnect, status, isMuted, unmute, mute, micFft } = useVoice();
 
   return (
     <div
       className={
-        "text-xs p-3 w-full border-t border-border flex flex-col md:flex-row gap-3"
+        cn(
+          "fixed bottom-0 left-0 w-full p-4 flex items-center justify-center",
+          "bg-gradient-to-t from-card via-card/90 to-card/0",
+        )
       }
     >
-      {top3.map(([key, value]) => (
-        <div className={"w-full overflow-hidden"}>
-          <div className={"flex items-center justify-between gap-1 font-mono pb-1"}>
-            <div className={"font-medium truncate"}>{key}</div>
-            <div className={"tabular-nums opacity-50"}>{value.toFixed(2)}</div>
-          </div>
-          <div
-            className={"relative h-1"}
-            style={
-              {
-                "--bg": isExpressionColor(key)
-                  ? expressionColors[key]
-                  : "var(--bg)",
-              } as CSSProperties
+      <AnimatePresence>
+        {status.value === "connected" ? (
+          <motion.div
+            initial={{
+              y: "100%",
+              opacity: 0,
+            }}
+            animate={{
+              y: 0,
+              opacity: 1,
+            }}
+            exit={{
+              y: "100%",
+              opacity: 0,
+            }}
+            className={
+              "p-4 bg-card border border-border rounded-lg shadow-sm flex items-center gap-4"
             }
           >
-            <div
-              className={
-                "absolute top-0 left-0 size-full rounded-full opacity-10 bg-[var(--bg)]"
-              }
-            />
-            <motion.div
-              className={
-                "absolute top-0 left-0 h-full bg-[var(--bg)] rounded-full"
-              }
-              initial={{ width: 0 }}
-              animate={{
-                width: `${R.pipe(
-                  value,
-                  R.clamp({ min: 0, max: 1 }),
-                  (value) => `${value * 100}%`
-                )}`,
+            <Toggle
+              pressed={!isMuted}
+              onPressedChange={() => {
+                if (isMuted) {
+                  unmute();
+                } else {
+                  mute();
+                }
               }}
-            />
-          </div>
-        </div>
-      ))}
+            >
+              {isMuted ? (
+                <MicOff className={"size-4"} />
+              ) : (
+                <Mic className={"size-4"} />
+              )}
+            </Toggle>
+
+            <div className={"relative grid h-8 w-48 shrink grow-0"}>
+              <MicFFT fft={micFft} className={"fill-current"} />
+            </div>
+
+            <Button
+              className={"flex items-center gap-1"}
+              onClick={() => {
+                disconnect();
+              }}
+              variant={"destructive"}
+            >
+              <span>
+                <Phone
+                  className={"size-4 opacity-50"}
+                  strokeWidth={2}
+                  stroke={"currentColor"}
+                />
+              </span>
+              <span>End Call</span>
+            </Button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
