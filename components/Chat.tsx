@@ -38,6 +38,7 @@ export default function ClientComponent({
             }
           }, 200);
         }}
+        configId="3f8d7e62-fff2-4895-aa03-6cbfc4050dda"
       >
         <Messages ref={ref} />
         <Controls />
