@@ -5,6 +5,8 @@ from system import System
 from pdf import PDF
 import google.generativeai as genai
 from datetime import datetime
+import openai
+from openai import OpenAI
 
 load_dotenv(override=True)
 
@@ -21,7 +23,13 @@ class Record:
             self.conversation = []
         self.client = MongoClient(os.getenv("MONGODB_URI"))
         genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-        self.model = genai.GenerativeModel('gemini-pro')
+        API_BASE = "https://api.01.ai/v1"
+        API_KEY = "your key"
+        # self.model = genai.GenerativeModel('gemini-pro')
+        self.clientY1 = OpenAI(
+            api_key=API_KEY,
+            base_url=API_BASE
+        )
 
     def check_conversation(self, patient_id):
         """Check if the latest conversation is processed or not.
@@ -45,19 +53,56 @@ class Record:
         result = response.text
 
         return {"content": result, "timestamp": today}
-
+    
     def summarize_conversation(self, conversation):
-        """Summarize the conversation. 
-        """
+        """Summarize the conversation."""
         task_description = ("I'm going to give you a list of questions and answers between nurse and patient. "
                             "You will give me a summary of the conversation.")
-        response = self.model.generate_content(task_description)
+        
+        # Generate the task description message using the client
+        completion_summary = self.clientY1.chat.completions.create(
+            model="yi-large",
+            messages=[{"role": "user", "content": task_description}]
+        )
+        summary_result = completion_summary.choices[0].message.content.strip()
+        print("Task description acknowledgement: ", summary_result)
 
-        conversation_data = "\n".join([f"{qa['question']}\n{qa['answer']}" for qa in conversation["content"]])
-        query = "Here is the conversation:\n" + conversation_data
-        response = self.model.generate_content(query)
+        # Prepare the conversation data
+        conversation_data = "\n".join([f"Q: {qa['question']}\nA: {qa['answer']}" for qa in conversation["content"]])
+        query = f"Here is the conversation:\n{conversation_data}\nPlease provide a summary."
 
-        return response.text
+        # Generate the summary using the client
+        response = self.clientY1.chat.completions.create(
+            model="yi-large",
+            messages=[{"role": "user", "content": query}]
+        )
+        summary_response = response.choices[0].message.content.strip()
+
+        print("Summary of the conversation: ", summary_response)
+
+        return summary_response
+
+
+    # def summarize_conversation(self, conversation):
+    #     """Summarize the conversation. 
+    #     """
+    #     task_description = ("I'm going to give you a list of questions and answers between nurse and patient. "
+    #                         "You will give me a summary of the conversation.")
+        
+        
+    #     completion_summary = self.client.chat.completions.create(
+    #         model="yi-large",
+    #         messages=[{"role": "user", "content": " I'm going to give you a list of questions and answers between nurse and patient. You will give me a summary of the conversation."}]
+    #     )
+    #     summary_result = completion_summary.choices[0].message.content.strip()
+    #     print("Should visit or not based on emotion: ", summary_result)
+    #     response = self.model.generate_content(task_description)
+
+    #     conversation_data = "\n".join([f"{qa['question']}\n{qa['answer']}" for qa in conversation["content"]])
+    #     query = "Here is the conversation:\n" + conversation_data
+    #     response = self.model.generate_content(query)
+
+    #     return response.text
 
     def save_record(self, record):
         """Save the record to document DB. 
